@@ -3,13 +3,13 @@ macro brenttrace()
         if tracing
             dt = Dict()
             if extended_trace
-                dt["x_minimum"] = x_minimum
+                dt["current_minimizer"] = current_minimizer
                 dt["x_lower"] = x_lower
                 dt["x_upper"] = x_upper
             end
             update!(tr,
                     iteration,
-                    f_minimum,
+                    minimum,
                     NaN,
                     dt,
                     store_trace,
@@ -44,18 +44,18 @@ function optimize{T <: AbstractFloat}(
 
     const golden_ratio::T = 0.5 * (3.0 - sqrt(5.0))
 
-    x_minimum = x_lower + golden_ratio*(x_upper-x_lower)
-    f_minimum = f(x_minimum)
+    current_minimizer = x_lower + golden_ratio*(x_upper-x_lower)
+    minimum = f(current_minimizer)
     f_calls = 1 # Number of calls to f
 
     step = zero(T)
     step_old = zero(T)
 
-    x_minimum_old = x_minimum
-    x_minimum_old_old = x_minimum
+    current_minimizer_old = current_minimizer
+    current_minimizer_old_old = current_minimizer
 
-    f_minimum_old = f_minimum
-    f_minimum_old_old = f_minimum
+    minimum_old = minimum
+    minimum_old_old = minimum
 
     iteration = 0
     converged = false
@@ -70,11 +70,11 @@ function optimize{T <: AbstractFloat}(
         p = zero(T)
         q = zero(T)
 
-        tolx = rel_tol * abs(x_minimum) + abs_tol
+        tolx = rel_tol * abs(current_minimizer) + abs_tol
 
         x_midpoint = (x_upper+x_lower)/2
 
-        if abs(x_minimum - x_midpoint) <= 2*tolx - (x_upper-x_lower)/2
+        if abs(current_minimizer - x_midpoint) <= 2*tolx - (x_upper-x_lower)/2
             converged = true
             break
         end
@@ -83,12 +83,12 @@ function optimize{T <: AbstractFloat}(
 
         if abs(step_old) > tolx
             # Compute parabola interpolation
-            # x_minimum + p/q is the optimum of the parabola
+            # current_minimizer + p/q is the optimum of the parabola
             # Also, q is guaranteed to be positive
 
-            r = (x_minimum - x_minimum_old) * (f_minimum - f_minimum_old_old)
-            q = (x_minimum - x_minimum_old_old) * (f_minimum - f_minimum_old)
-            p = (x_minimum - x_minimum_old_old) * q - (x_minimum - x_minimum_old) * r
+            r = (current_minimizer - current_minimizer_old) * (minimum - minimum_old_old)
+            q = (current_minimizer - current_minimizer_old_old) * (minimum - minimum_old)
+            p = (current_minimizer - current_minimizer_old_old) * q - (current_minimizer - current_minimizer_old) * r
             q = 2(q - r)
 
             if q > 0
@@ -98,56 +98,56 @@ function optimize{T <: AbstractFloat}(
             end
         end
 
-        if abs(p) < abs(q*step_old/2) && p < q*(x_upper-x_minimum) && p < q*(x_minimum-x_lower)
+        if abs(p) < abs(q*step_old/2) && p < q*(x_upper-current_minimizer) && p < q*(current_minimizer-x_lower)
             step_old = step
             step = p/q
 
             # The function must not be evaluated too close to x_upper or x_lower
-            x_temp = x_minimum + step
+            x_temp = current_minimizer + step
             if ((x_temp - x_lower) < 2*tolx || (x_upper - x_temp) < 2*tolx)
-                step = (x_minimum < x_midpoint) ? tolx : -tolx
+                step = (current_minimizer < x_midpoint) ? tolx : -tolx
             end
         else
-            step_old = (x_minimum < x_midpoint) ? x_upper - x_minimum : x_lower - x_minimum
+            step_old = (current_minimizer < x_midpoint) ? x_upper - current_minimizer : x_lower - current_minimizer
             step = golden_ratio * step_old
         end
 
-        # The function must not be evaluated too close to x_minimum
+        # The function must not be evaluated too close to current_minimizer
         if abs(step) >= tolx
-            x_new = x_minimum + step
+            x_new = current_minimizer + step
         else
-            x_new = x_minimum + ((step > 0) ? tolx : -tolx)
+            x_new = current_minimizer + ((step > 0) ? tolx : -tolx)
         end
 
         f_new = f(x_new)
         f_calls += 1
 
-        if f_new <= f_minimum
-            if x_new < x_minimum
-                x_upper = x_minimum
+        if f_new <= minimum
+            if x_new < current_minimizer
+                x_upper = current_minimizer
             else
-                x_lower = x_minimum
+                x_lower = current_minimizer
             end
-            x_minimum_old_old = x_minimum_old
-            f_minimum_old_old = f_minimum_old
-            x_minimum_old = x_minimum
-            f_minimum_old = f_minimum
-            x_minimum = x_new
-            f_minimum = f_new
+            current_minimizer_old_old = current_minimizer_old
+            minimum_old_old = minimum_old
+            current_minimizer_old = current_minimizer
+            minimum_old = minimum
+            current_minimizer = x_new
+            minimum = f_new
         else
-            if x_new < x_minimum
+            if x_new < current_minimizer
                 x_lower = x_new
             else
                 x_upper = x_new
             end
-            if f_new <= f_minimum_old || x_minimum_old == x_minimum
-                x_minimum_old_old = x_minimum_old
-                f_minimum_old_old = f_minimum_old
-                x_minimum_old = x_new
-                f_minimum_old = f_new
-            elseif f_new <= f_minimum_old_old || x_minimum_old_old == x_minimum || x_minimum_old_old == x_minimum_old
-                x_minimum_old_old = x_new
-                f_minimum_old_old = f_new
+            if f_new <= minimum_old || current_minimizer_old == current_minimizer
+                current_minimizer_old_old = current_minimizer_old
+                minimum_old_old = minimum_old
+                current_minimizer_old = x_new
+                minimum_old = f_new
+            elseif f_new <= minimum_old_old || current_minimizer_old_old == current_minimizer || current_minimizer_old_old == current_minimizer_old
+                current_minimizer_old_old = x_new
+                minimum_old_old = f_new
             end
         end
 
@@ -157,8 +157,8 @@ function optimize{T <: AbstractFloat}(
     return UnivariateOptimizationResults("Brent's Method",
                                          initial_lower,
                                          initial_upper,
-                                         x_minimum,
-                                         Float64(f_minimum),
+                                         current_minimizer,
+                                         Float64(minimum),
                                          iteration,
                                          iteration == iterations,
                                          converged,

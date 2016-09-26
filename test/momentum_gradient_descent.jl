@@ -10,9 +10,9 @@ let
                                      OptimizationOptions(autodiff = use_autodiff,
                                                          iterations = iterations,
                                                          show_trace = debug))
-                debug && @show res.minimum
+                debug && @show res.minimizer
                 debug && @show prob.solutions
-                @assert norm(res.minimum - prob.solutions, Inf) < 1e-2
+                @assert norm(res.minimizer - prob.solutions, Inf) < 1e-2
             end
         end
     end

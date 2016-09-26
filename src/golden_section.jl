@@ -3,13 +3,13 @@ macro goldensectiontrace()
         if tracing
             dt = Dict()
             if extended_trace
-                dt["x_minimum"] = x_minimum
+                dt["current_minimizer"] = current_minimizer
                 dt["x_lower"] = x_lower
                 dt["x_upper"] = x_upper
             end
             update!(tr,
                     iteration,
-                    f_minimum,
+                    minimum,
                     NaN,
                     dt,
                     store_trace,
@@ -43,8 +43,8 @@ function optimize{T <: AbstractFloat}(f::Function, x_lower::T, x_upper::T,
 
     const golden_ratio::T = 0.5 * (3.0 - sqrt(5.0))
 
-    x_minimum = x_lower + golden_ratio*(x_upper-x_lower)
-    f_minimum = f(x_minimum)
+    current_minimizer = x_lower + golden_ratio*(x_upper-x_lower)
+    minimum = f(current_minimizer)
     f_calls = 1 # Number of calls to f
 
     iteration = 0
@@ -57,36 +57,36 @@ function optimize{T <: AbstractFloat}(f::Function, x_lower::T, x_upper::T,
 
     while iteration < iterations
 
-        tolx = rel_tol * abs(x_minimum) + abs_tol
+        tolx = rel_tol * abs(current_minimizer) + abs_tol
 
         x_midpoint = (x_upper+x_lower)/2
 
-        if abs(x_minimum - x_midpoint) <= 2*tolx - (x_upper-x_lower)/2
+        if abs(current_minimizer - x_midpoint) <= 2*tolx - (x_upper-x_lower)/2
             converged = true
             break
         end
 
         iteration += 1
 
-        if x_upper - x_minimum > x_minimum - x_lower
-            x_new = x_minimum + golden_ratio*(x_upper - x_minimum)
+        if x_upper - current_minimizer > current_minimizer - x_lower
+            x_new = current_minimizer + golden_ratio*(x_upper - current_minimizer)
             f_new = f(x_new)
             f_calls += 1
-            if f_new < f_minimum
-                x_lower = x_minimum
-                x_minimum = x_new
-                f_minimum = f_new
+            if f_new < minimum
+                x_lower = current_minimizer
+                current_minimizer = x_new
+                minimum = f_new
             else
                 x_upper = x_new
             end
         else
-            x_new = x_minimum - golden_ratio*(x_minimum - x_lower)
+            x_new = current_minimizer - golden_ratio*(current_minimizer - x_lower)
             f_new = f(x_new)
             f_calls += 1
-            if f_new < f_minimum
-                x_upper = x_minimum
-                x_minimum = x_new
-                f_minimum = f_new
+            if f_new < minimum
+                x_upper = current_minimizer
+                current_minimizer = x_new
+                minimum = f_new
             else
                 x_lower = x_new
             end
@@ -98,8 +98,8 @@ function optimize{T <: AbstractFloat}(f::Function, x_lower::T, x_upper::T,
     return UnivariateOptimizationResults("Golden Section Search",
                                          initial_lower,
                                          initial_upper,
-                                         x_minimum,
-                                         Float64(f_minimum),
+                                         current_minimizer,
+                                         Float64(minimum),
                                          iteration,
                                          iteration == iterations,
                                          converged,

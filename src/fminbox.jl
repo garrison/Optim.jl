@@ -201,7 +201,7 @@ function optimize{T<:AbstractFloat}(
         else
             append!(results, resultsnew)
         end
-        copy!(x, results.minimum)
+        copy!(x, results.minimizer)
         if show_trace > 0
             println("x: ", x)
         end
@@ -214,12 +214,12 @@ function optimize{T<:AbstractFloat}(
             @inbounds g[i] = gfunc[i] + mu*gbarrier[i]
         end
 
-        x_converged, f_converged, g_converged, converged = assess_convergence(x, xold, results.f_minimum, fval0, g, x_tol, f_tol, g_tol)
+        x_converged, f_converged, g_converged, converged = assess_convergence(x, xold, results.minimum, fval0, g, x_tol, f_tol, g_tol)
 
     end
     results.method = "Fminbox with $(results.method)"
     results.iterations = iteration
     results.initial_x = initial_x
-    results.f_minimum = df.f(results.minimum)
+    results.minimum = df.f(results.minimizer)
     results
 end

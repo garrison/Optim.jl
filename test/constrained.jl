@@ -28,12 +28,12 @@ let
         func = (x, g) -> quadratic!(x, g, AtA, A'*b, tmp)
         objective = Optim.DifferentiableFunction(x->func(x, nothing), (x,g)->func(x,g), func)
         results = Optim.optimize(objective, initial_x, method=ConjugateGradient())
-        results = Optim.optimize(objective, results.minimum, method=ConjugateGradient())  # restart to ensure high-precision convergence
+        results = Optim.optimize(objective, results.minimizer, method=ConjugateGradient())  # restart to ensure high-precision convergence
         @test Optim.converged(results)
         g = similar(initial_x)
-        @test func(results.minimum, g) + dot(b,b)/2 < 1e-8
+        @test func(results.minimizer, g) + dot(b,b)/2 < 1e-8
         @test norm(g) < 1e-4
-        outbox = any(abs(results.minimum) .> boxl)
+        outbox = any(abs(results.minimizer) .> boxl)
     end
 
     # fminbox
@@ -54,7 +54,7 @@ let
     # tests for #180
     results = Optim.optimize(objective, initial_x, l, u, Fminbox(); iterations = 2)
     @test results.iterations == 2
-    @test results.f_minimum == objective.f(results.minimum)
+    @test Optim.minimum(results) == objective.f(results.minimizer)
 
     # might fail if changes are made to Optim.jl
     # TODO: come up with a better test
